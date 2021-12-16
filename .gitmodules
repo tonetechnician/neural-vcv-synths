@@ -1,0 +1,3 @@
+[submodule "references /code /ddsp_pytorch"]
+	path = references /code /ddsp_pytorch
+	url = https://github.com/acids-ircam/ddsp_pytorch.git
