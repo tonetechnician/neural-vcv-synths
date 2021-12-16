@@ -12,7 +12,7 @@ There are two directories.
 
 The repo holds some sub-repos. If you want to clone these use:
 
-1. `git clone --recurse-submodules`
+1. `git clone https://gitlab.com/tonetechnician/nash-suite.git --recurse-submodules`
 
 
 
