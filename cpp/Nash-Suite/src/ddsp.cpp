@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include "ddsp_model.h"
 #include <audio.hpp>
-
-static const size_t BLOCK_SIZE = 4096;
+static const size_t BLOCK_SIZE = 1024;
 
 struct Ddsp : Module {
 	enum ParamId {
@@ -36,11 +35,21 @@ struct Ddsp : Module {
 
 	void process(const ProcessArgs& args) override {
 		float out = 0;
+		float pitch = 0;
+		float freq = 0;
 		if (inputs[PITCH_INPUT].isConnected())
 		{
-			float pitch = inputs[PITCH_INPUT].getVoltage();
-			float loudness = inputs[LOUDNESS_INPUT].getVoltage();
-			ddspModel->perform(&pitch, &loudness, &out, 4096);
+			if (!linear) {
+				pitch += inputs[PITCH_INPUT].getVoltage();
+				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
+			}
+			else {
+				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
+				freq += dsp::FREQ_C4 * inputs[PITCH_INPUT].getVoltage();
+			}
+			freq = clamp(freq, 0.f, args.sampleRate / 2.f);
+			float loudness = 0;
+			ddspModel->perform(&freq, &loudness, &out, BLOCK_SIZE);
 			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out, -5.0f, 5.0f));
 		}
 	}
@@ -50,10 +59,11 @@ struct Ddsp : Module {
 		if (filepath)
 		{
 			ddspModel->load(at::str(filepath));
-			std::cout  << "Model loaded" << std::endl;
 		}
 	}
 	char* filepath;
+
+	bool linear = false;
 };
 
 

@@ -1,7 +1,5 @@
 #pragma once
 #include <rack.hpp>
-#include <torch/script.h>
-#include <torch/torch.h>
 
 using namespace rack;
 
