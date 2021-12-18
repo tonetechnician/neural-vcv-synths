@@ -5,7 +5,7 @@ endif
 include $(RACK_DIR)/arch.mk
 
 OBJCOPY ?= objcopy
-STRIP ?= strip
+STRIP ?=
 INSTALL_NAME_TOOL ?= install_name_tool
 OTOOL ?= otool
 
@@ -14,12 +14,11 @@ FLAGS += -MMD -MP
 # Debugger symbols. These are removed with `strip`.
 FLAGS += -g
 # Optimization
-FLAGS += -O3 -march=nehalem -funsafe-math-optimizations
+FLAGS += -O -march=nehalem -funsafe-math-optimizations
 # Warnings
 FLAGS += -Wall -Wextra -Wno-unused-parameter
 # C++ standard
-CXXFLAGS += -std=c++11
-
+CXXFLAGS += -std=c++14
 # Architecture-independent flags
 ifdef ARCH_LIN
 	FLAGS += -DARCH_LIN
