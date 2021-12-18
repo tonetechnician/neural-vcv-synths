@@ -12,5 +12,12 @@
   "sourceUrl": "",
   "donateUrl": "",
   "changelogUrl": "",
-  "modules": []
+  "modules": [
+    {
+      "slug": "ddsp",
+      "name": "ddsp",
+      "description": "",
+      "tags": []
+    }
+  ]
 }
