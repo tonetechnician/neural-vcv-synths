@@ -58,7 +58,7 @@ struct Ddsp : Module {
 
 	Ddsp() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
-		configParam(INTERP_MODEL_PARAM, 0.f, 1.f, 0.f, "Interpolate Model");
+		configParam(INTERP_MODEL_PARAM, 0.f, 3.f, 0.f, "Interpolate Model");
 		configInput(PITCH_INPUT, "Pitch");
 		configInput(LOUDNESS_INPUT, "Loudness");
 		configOutput(OUTPUT_OUTPUT, "Audio");
@@ -76,12 +76,6 @@ struct Ddsp : Module {
 	}
 
 	void process(const ProcessArgs& args) override {
-		if (params[INTERP_MODEL_PARAM].getValue() != currentPosition)
-		{
-			currentPosition = params[INTERP_MODEL_PARAM].getValue();
-			interpolate_weights(actualModule,state1,state2, currentPosition);
-			ddspModel->load(actualModule);
-		}
 
 		float pitch = 0;
 		float freq = 0;
@@ -107,6 +101,14 @@ struct Ddsp : Module {
 
 			if (!(head % B_SIZE))
 			{
+            		if (params[INTERP_MODEL_PARAM].getValue() != currentPosition)
+                    {
+                        currentPosition = params[INTERP_MODEL_PARAM].getValue();
+                        interpolate_weights(actualModule,state1,state2, currentPosition);
+                        ddspModel->load(actualModule);
+                    }
+            
+            
 					// Processed the output buffer
 					if (compute_thread)
 					{
