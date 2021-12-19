@@ -5,6 +5,7 @@
 #include <audio.hpp>
 #include <thread>
 #include "convolver.h"
+#include "weight_tools.h"
 
 static const size_t B_SIZE = 1024;
 
@@ -14,6 +15,7 @@ void thread_perform(DDSPModel* model, float* freq_buf, float* loudness_buf, floa
 }
 struct Ddsp : Module {
 	enum ParamId {
+		INTERP_MODEL_PARAM,
 		PARAMS_LEN
 	};
 	enum InputId {
@@ -39,15 +41,24 @@ struct Ddsp : Module {
 	float loudness_buffer[2 * B_SIZE];
 	float out_buffer[2 * B_SIZE];
 	float test_buffer[2 * B_SIZE];
-	char* modelPath;
+	char* modelPath1;
+	char* modelPath2;
+
+	torch::jit::Module torchModule1;
+	torch::jit::Module torchModule2;
+	std::vector<torch::Tensor> state1,state2;
+	torch::jit::script::Module actualModule;
 
 	bool linear = false;
 
 	int model_head = 0;
 	int sample_counter = 0;
 
+	float currentPosition = 0.0f;
+
 	Ddsp() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
+		configParam(INTERP_MODEL_PARAM, 0.f, 1.f, 0.f, "Interpolate Model");
 		configInput(PITCH_INPUT, "Pitch");
 		configInput(LOUDNESS_INPUT, "Loudness");
 		configOutput(OUTPUT_OUTPUT, "Audio");
@@ -65,6 +76,13 @@ struct Ddsp : Module {
 	}
 
 	void process(const ProcessArgs& args) override {
+		if (params[INTERP_MODEL_PARAM].getValue() != currentPosition)
+		{
+			currentPosition = params[INTERP_MODEL_PARAM].getValue();
+			interpolate_weights(actualModule,state1,state2, currentPosition);
+			ddspModel->load(actualModule);
+		}
+
 		float pitch = 0;
 		float freq = 0;
 		if (inputs[PITCH_INPUT].isConnected() && ddspModel->modelIsLoaded() && convolver->isIRLoaded())
@@ -106,20 +124,26 @@ struct Ddsp : Module {
 
 					head = head % (2 * B_SIZE);  	 
 			}
-
-			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
-			// increment the buffer counter
-			// std::cout << "Test buffer output value: " << test_buffer[(model_head + head) % (2 * B_SIZE)] << std::endl;
-			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(test_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
 		} 
 	}
 
 	void openDialogAndLoadModel() {
-		modelPath = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
-		if (modelPath)
+		modelPath1 = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
+		if (modelPath1)
 		{
-			ddspModel->load(at::str(modelPath));
+			torchModule1 = torch::jit::load(at::str(modelPath1));
+    	copy_params_to_vector(torchModule1,state1);
 		}
+		modelPath2 = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
+		if (modelPath2)
+		{
+			torchModule2 = torch::jit::load(at::str(modelPath1));
+    	copy_params_to_vector(torchModule2,state2);
+		}
+
+		interpolate_weights(actualModule,state1,state2,currentPosition);
+
+		ddspModel->load(actualModule);
 		convolver->loadIR();
 	}
 };
@@ -138,6 +162,8 @@ struct DdspWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.489, 10.576)), module, Ddsp::PITCH_INPUT));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.706, 10.431)), module, Ddsp::LOUDNESS_INPUT));
 
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.24, 84.13)), module, Ddsp::INTERP_MODEL_PARAM));
+
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.24, 113.581)), module, Ddsp::OUTPUT_OUTPUT));
 	}
 
@@ -146,9 +172,7 @@ struct DdspWidget : ModuleWidget {
 		assert(module);
 
 		menu->addChild(new MenuSeparator);
-
 		menu->addChild(createMenuItem("Load Module", "", [=]() {module->openDialogAndLoadModel();}));
-		menu->addChild(createMenuItem("Load IR", "", [=]() {module->openDialogAndLoadModel();}));
 	}
 };
 

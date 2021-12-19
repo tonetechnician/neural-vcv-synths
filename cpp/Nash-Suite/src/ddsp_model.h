@@ -15,6 +15,7 @@ private:
 public:
     DDSPModel();
     int load(std::string path);
+    int load(torch::jit::Module torch_module);
     void perform(float *pitch, float *loudness, float *out_buffer, int buffer_size);
     bool modelIsLoaded();
 };

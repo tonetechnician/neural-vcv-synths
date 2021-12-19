@@ -28,6 +28,25 @@ int DDSPModel::load(std::string path)
     }
 }
 
+int DDSPModel::load(torch::jit::Module torch_module)
+{
+    try
+    {
+        m_scripted_model = torch_module;
+        m_scripted_model.eval();
+        m_scripted_model.to(DEVICE);
+        m_loaded = 1;
+        std::cout << "Successfully loaded module" << std::endl;
+        return 0;
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "Failed to load module" << std::endl;
+        m_loaded = 0;
+        return 1;
+    }
+}
+
 void DDSPModel::perform(float *pitch, float *loudness, float *out_buffer, int buffer_size)
 {
     torch::NoGradGuard no_grad;
