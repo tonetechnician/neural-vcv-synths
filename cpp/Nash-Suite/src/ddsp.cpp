@@ -4,6 +4,7 @@
 #include "ddsp_model.h"
 #include <audio.hpp>
 #include <thread>
+#include "dr_wav.h"
 
 static const size_t B_SIZE = 1024;
 
@@ -44,6 +45,13 @@ struct Ddsp : Module {
 	int model_head = 0;
 	int sample_counter = 0;
 
+	dsp::RealTimeConvolver* convolver = NULL;
+	std::vector<float> samples;
+	dsp::DoubleRingBuffer<dsp::Frame<1>, 16 * B_SIZE> convolutionInputBuffer;
+	dsp::DoubleRingBuffer<dsp::Frame<1>, 16 * B_SIZE> convolutionOutputBuffer;
+	dsp::SampleRateConverter<1> inputSrc;
+	dsp::SampleRateConverter<1> outputSrc;
+
 	Ddsp() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 		configInput(PITCH_INPUT, "Pitch");
@@ -56,6 +64,8 @@ struct Ddsp : Module {
 			freq_buffer[i] = 440.0f;
 			loudness_buffer[i] = 68;
 		}
+
+		convolver = new dsp::RealTimeConvolver(B_SIZE);
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -73,7 +83,43 @@ struct Ddsp : Module {
 			}
 			freq_buffer[head % (2 * B_SIZE)] = clamp(freq, 0.f, args.sampleRate / 2.f);
 
-			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
+
+
+			float modelOut =  out_buffer[(model_head + head) % (2 * B_SIZE)];
+
+			if (!convolutionInputBuffer.full()) {
+			dsp::Frame<1> inputFrame;
+			inputFrame.samples[0] = modelOut;
+			convolutionInputBuffer.push(inputFrame);
+			}
+
+			if (convolutionOutputBuffer.empty()) {
+				float input[B_SIZE] = {};
+				float output[B_SIZE];
+
+				// Convert input buffer
+				{
+					inputSrc.setRates(args.sampleRate, 48000);
+					int inLen = convolutionInputBuffer.size();
+					int outLen = B_SIZE;
+					inputSrc.process(convolutionInputBuffer.startData(), &inLen, (dsp::Frame<1>*) input, &outLen);
+					convolutionInputBuffer.startIncr(inLen);
+				}
+
+				convolver->processBlock(input, output);
+
+				// Convert output buffer
+				{
+					outputSrc.setRates(48000, args.sampleRate);
+					int inLen = B_SIZE;
+					int outLen = convolutionOutputBuffer.capacity();
+					outputSrc.process((dsp::Frame<1>*) output, &inLen, convolutionOutputBuffer.endData(), &outLen);
+					convolutionOutputBuffer.endIncr(outLen);
+				}
+
+				float wet = convolutionOutputBuffer.shift().samples[0];
+				outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(modelOut + wet, -10.0f, 10.0f));
+			}
 
 			if (!(head % B_SIZE))
 			{
@@ -108,6 +154,44 @@ struct Ddsp : Module {
 			ddspModel->load(at::str(modelPath));
 		}
 	}
+
+	void openDialogAndLoadIR() {
+		std::string filepathIR;
+		filepathIR = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
+
+		if (filepathIR.c_str()) 
+		{
+			std::cout << filepathIR << std::endl;
+			
+			std::string ext = string::lowercase(system::getExtension(filepathIR));
+			std::cout << ext << std::endl;
+			assert(ext == ".wav");
+
+			drwav wav;
+
+#if defined ARCH_WIN
+			if (!drwav_init_file_w(&wav, string::UTF8toUTF16(path).c_str(), NULL))
+#else
+			if (!drwav_init_file(&wav, filepathIR.c_str(), NULL))
+#endif
+				return;
+			
+			size_t len = wav.totalPCMFrameCount * wav.channels;
+			if (len == 0 || len >= (1 << 20))
+				return;
+
+			samples.clear();
+			samples.resize(len);
+
+			drwav_read_pcm_frames_f32(&wav, wav.totalPCMFrameCount, samples.data());
+
+			std::cout << samples.data() << std::endl;
+
+			size_t kernelLen = wav.dataChunkDataSize / wav.bitsPerSample;
+
+			convolver->setKernel(samples.data(), samples.size());
+		}
+	}
 };
 
 
@@ -134,6 +218,9 @@ struct DdspWidget : ModuleWidget {
 		menu->addChild(new MenuSeparator);
 
 		menu->addChild(createMenuItem("Load Module", "", [=]() {module->openDialogAndLoadModel();}));
+
+		menu->addChild(new MenuSeparator);
+		menu->addChild(createMenuItem("Load IR", "", [=]() {module->openDialogAndLoadIR();}));
 	}
 };
 
