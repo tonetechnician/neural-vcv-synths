@@ -3,8 +3,14 @@
 #include <stdlib.h>
 #include "ddsp_model.h"
 #include <audio.hpp>
-static const size_t BLOCK_SIZE = 1024;
+#include <thread>
 
+static const size_t B_SIZE = 1024;
+
+void thread_perform(DDSPModel* model, float* freq_buf, float* loudness_buf, float* out_buffer, int block_size)
+{
+		model->perform(freq_buf, loudness_buf, out_buffer, block_size);
+}
 struct Ddsp : Module {
 	enum ParamId {
 		PARAMS_LEN
@@ -22,7 +28,21 @@ struct Ddsp : Module {
 		LIGHTS_LEN
 	};
 
+
+
 	DDSPModel* ddspModel;
+	std::thread* compute_thread = nullptr;
+	int head = 0;
+	float freq_buffer[2 * B_SIZE];
+	float loudness_buffer[2 * B_SIZE];
+	float out_buffer[2 * B_SIZE];
+
+	char* modelPath;
+
+	bool linear = false;
+
+	int model_head = 0;
+	int sample_counter = 0;
 
 	Ddsp() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
@@ -31,10 +51,14 @@ struct Ddsp : Module {
 		configOutput(OUTPUT_OUTPUT, "Audio");
 		std::cout  << "Hi from ddsp" << std::endl;
 		ddspModel = new DDSPModel();
+		for (int i = 0; i < 2 * B_SIZE; i++) 
+		{
+			freq_buffer[i] = 440.0f;
+			loudness_buffer[i] = 68;
+		}
 	}
 
 	void process(const ProcessArgs& args) override {
-		float out = 0;
 		float pitch = 0;
 		float freq = 0;
 		if (inputs[PITCH_INPUT].isConnected())
@@ -47,23 +71,43 @@ struct Ddsp : Module {
 				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
 				freq += dsp::FREQ_C4 * inputs[PITCH_INPUT].getVoltage();
 			}
-			freq = clamp(freq, 0.f, args.sampleRate / 2.f);
-			float loudness = 0;
-			ddspModel->perform(&freq, &loudness, &out, BLOCK_SIZE);
-			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out, -5.0f, 5.0f));
-		}
+			freq_buffer[head % (2 * B_SIZE)] = clamp(freq, 0.f, args.sampleRate / 2.f);
+
+			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
+
+			if (!(head % B_SIZE))
+			{
+					// Processed the output buffer
+					if (compute_thread)
+					{
+							compute_thread->join();
+					}
+
+					// Thread complete calculate another block, place it a varying parts of the buffer
+					model_head = ((head + B_SIZE) % (2 * B_SIZE));
+
+					compute_thread = new std::thread(		thread_perform,
+																							ddspModel,
+																							&freq_buffer[model_head],
+																							&loudness_buffer[model_head],
+																							&out_buffer[model_head],
+																							B_SIZE);
+
+					head = head % (2 * B_SIZE);  	 
+			}
+
+			// increment the buffer counter
+			head++;
+		} 
 	}
 
 	void openDialogAndLoadModel() {
-		filepath = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
-		if (filepath)
+		modelPath = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
+		if (modelPath)
 		{
-			ddspModel->load(at::str(filepath));
+			ddspModel->load(at::str(modelPath));
 		}
 	}
-	char* filepath;
-
-	bool linear = false;
 };
 
 
