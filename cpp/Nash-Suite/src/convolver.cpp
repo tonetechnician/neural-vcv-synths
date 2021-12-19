@@ -34,6 +34,7 @@ void Convolver::loadIR()
 			size_t kernelLen = wav.dataChunkDataSize / sizeof(float);
 			const float * kernelPtr = samples.data();
 			convolver->setKernel(kernelPtr, kernelLen);
+      irLoaded = true;
 		}
 }
 
@@ -79,4 +80,9 @@ void Convolver::convolve(const float* in_buffer, float &output, const int sample
 		float wet = outputBuffer.shift().samples[0];
     output = wet;
 		// outputs[OUTPUT_OUTPUT].setVoltage(clamp(wet, -10.0f, 10.0f));
+}
+
+bool Convolver::isIRLoaded()
+{
+  return irLoaded;
 }

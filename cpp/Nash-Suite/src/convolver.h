@@ -2,7 +2,7 @@
 #include <iostream>
 #include "dr_wav.h"
 
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 2048
 
 class Convolver
 {
@@ -15,8 +15,10 @@ private:
 	std::vector<float> samples;
 
   char* irPath;
+  bool irLoaded = false;
 public:
     Convolver();
     void loadIR();
     void convolve(const float* in_buffer, float &output, const int sampleRate);
+    bool isIRLoaded();
 };
