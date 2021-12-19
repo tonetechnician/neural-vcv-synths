@@ -101,12 +101,11 @@ struct Ddsp : Module {
 
 			if (!(head % B_SIZE))
 			{
-            		if (params[INTERP_MODEL_PARAM].getValue() != currentPosition)
-                    {
-                        currentPosition = params[INTERP_MODEL_PARAM].getValue();
-                        interpolate_weights(actualModule,state1,state2, currentPosition);
-                        ddspModel->load(actualModule);
-                    }
+					if (params[INTERP_MODEL_PARAM].getValue() != currentPosition)
+					{
+							currentPosition = params[INTERP_MODEL_PARAM].getValue();
+							interpolate_weights(actualModule,state1,state2, currentPosition);
+					}
             
             
 					// Processed the output buffer
@@ -134,8 +133,8 @@ struct Ddsp : Module {
 		modelPath1 = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
 		if (modelPath1)
 		{
-			torchModule1 = torch::jit::load(at::str(modelPath1));
-    	copy_params_to_vector(torchModule1,state1);
+			actualModule = torch::jit::load(at::str(modelPath1));
+    	copy_params_to_vector(actualModule,state1);
 		}
 		modelPath2 = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
 		if (modelPath2)
