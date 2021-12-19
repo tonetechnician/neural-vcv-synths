@@ -38,7 +38,7 @@ struct Ddsp : Module {
 	float freq_buffer[2 * B_SIZE];
 	float loudness_buffer[2 * B_SIZE];
 	float out_buffer[2 * B_SIZE];
-	float test_buffer[B_SIZE];
+	float test_buffer[2 * B_SIZE];
 	char* modelPath;
 
 	bool linear = false;
@@ -58,7 +58,7 @@ struct Ddsp : Module {
 		{
 			// freq_buffer[i] = 440.0f;
 			loudness_buffer[i] = 68;
-			test_buffer[i] = (i % B_SIZE)/ (B_SIZE * 2);
+			test_buffer[i] = (float) (i % B_SIZE) / (B_SIZE * 2.0f) - 0.25;
 			std::cout << "Test buffer value: " << test_buffer[i] << std::endl;
 		}
 	}
@@ -104,7 +104,7 @@ struct Ddsp : Module {
 
 			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
 			// increment the buffer counter
-			std::cout << "Test buffer output value: " << test_buffer[(model_head + head) % (2 * B_SIZE)] << std::endl;
+			// std::cout << "Test buffer output value: " << test_buffer[(model_head + head) % (2 * B_SIZE)] << std::endl;
 			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(test_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
 			head++;
 		} 
