@@ -16,4 +16,5 @@ public:
     DDSPModel();
     int load(std::string path);
     void perform(float *pitch, float *loudness, float *out_buffer, int buffer_size);
+    bool modelIsLoaded();
 };

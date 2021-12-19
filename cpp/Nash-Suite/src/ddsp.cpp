@@ -61,7 +61,7 @@ struct Ddsp : Module {
 	void process(const ProcessArgs& args) override {
 		float pitch = 0;
 		float freq = 0;
-		if (inputs[PITCH_INPUT].isConnected())
+		if (inputs[PITCH_INPUT].isConnected() && ddspModel->modelIsLoaded())
 		{
 			if (!linear) {
 				pitch += inputs[PITCH_INPUT].getVoltage();

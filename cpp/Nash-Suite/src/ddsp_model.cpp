@@ -49,3 +49,8 @@ void DDSPModel::perform(float *pitch, float *loudness, float *out_buffer, int bu
         memcpy(out_buffer, out, buffer_size * sizeof(float));
     }
 }
+
+bool DDSPModel::modelIsLoaded()
+{
+    return m_loaded == 1;
+}
