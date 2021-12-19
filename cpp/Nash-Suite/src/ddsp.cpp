@@ -38,7 +38,7 @@ struct Ddsp : Module {
 	float freq_buffer[2 * B_SIZE];
 	float loudness_buffer[2 * B_SIZE];
 	float out_buffer[2 * B_SIZE];
-
+	float test_buffer[B_SIZE];
 	char* modelPath;
 
 	bool linear = false;
@@ -56,8 +56,10 @@ struct Ddsp : Module {
 		convolver = new Convolver();
 		for (int i = 0; i < 2 * B_SIZE; i++) 
 		{
-			freq_buffer[i] = 440.0f;
+			// freq_buffer[i] = 440.0f;
 			loudness_buffer[i] = 68;
+			test_buffer[i] = (i % B_SIZE)/ (B_SIZE * 2);
+			std::cout << "Test buffer value: " << test_buffer[i] << std::endl;
 		}
 	}
 
@@ -66,21 +68,6 @@ struct Ddsp : Module {
 		float freq = 0;
 		if (inputs[PITCH_INPUT].isConnected() && ddspModel->modelIsLoaded())
 		{
-			if (!linear) {
-				pitch += inputs[PITCH_INPUT].getVoltage();
-				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
-			}
-			else {
-				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
-				freq += dsp::FREQ_C4 * inputs[PITCH_INPUT].getVoltage();
-			}
-			freq_buffer[head % (2 * B_SIZE)] = clamp(freq, 0.f, args.sampleRate / 2.f);
-			float output = 0;
-
-			convolver->convolve(&out_buffer[(model_head + head) % (2 * B_SIZE)], output, args.sampleRate);
-			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
-			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(output, -10.0f, 10.0f));
-
 			if (!(head % B_SIZE))
 			{
 					// Processed the output buffer
@@ -101,8 +88,24 @@ struct Ddsp : Module {
 
 					head = head % (2 * B_SIZE);  	 
 			}
+			if (!linear) {
+				pitch += inputs[PITCH_INPUT].getVoltage();
+				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
+			}
+			else {
+				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
+				freq += dsp::FREQ_C4 * inputs[PITCH_INPUT].getVoltage();
+			}
+			freq_buffer[head % (2 * B_SIZE)] = clamp(freq, 0.f, args.sampleRate / 2.f);
+			float output = 0;
 
+			// convolver->convolve(&out_buffer[(model_head + head) % (2 * B_SIZE)], output, args.sampleRate);
+			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(output, -10.0f, 10.0f));
+
+			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
 			// increment the buffer counter
+			std::cout << "Test buffer output value: " << test_buffer[(model_head + head) % (2 * B_SIZE)] << std::endl;
+			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(test_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
 			head++;
 		} 
 	}
