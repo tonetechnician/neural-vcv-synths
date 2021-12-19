@@ -98,6 +98,7 @@ struct Ddsp : Module {
 			int index = (model_head + (head % B_SIZE)) % (2 * B_SIZE);
 
 			freq_buffer[index] = clamp(freq, 0.f, args.sampleRate / 2.f);
+			loudness_buffer[index] = rescale(inputs[LOUDNESS_INPUT].getVoltage(), -10.0f, 10.0f, 0.0f, 100.0f);
 
 			float output = 0;
 			convolver->convolve(&out_buffer[index], output, args.sampleRate);
@@ -137,7 +138,7 @@ struct Ddsp : Module {
 		modelPath2 = osdialog_file(osdialog_file_action::OSDIALOG_OPEN, nullptr, nullptr, nullptr);
 		if (modelPath2)
 		{
-			torchModule2 = torch::jit::load(at::str(modelPath1));
+			torchModule2 = torch::jit::load(at::str(modelPath2));
     	copy_params_to_vector(torchModule2,state2);
 		}
 
