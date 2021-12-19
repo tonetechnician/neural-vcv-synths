@@ -4,6 +4,7 @@
 #include "ddsp_model.h"
 #include <audio.hpp>
 #include <thread>
+#include "convolver.h"
 
 static const size_t B_SIZE = 1024;
 
@@ -31,6 +32,7 @@ struct Ddsp : Module {
 
 
 	DDSPModel* ddspModel;
+	Convolver* convolver;
 	std::thread* compute_thread = nullptr;
 	int head = 0;
 	float freq_buffer[2 * B_SIZE];
@@ -51,6 +53,7 @@ struct Ddsp : Module {
 		configOutput(OUTPUT_OUTPUT, "Audio");
 		std::cout  << "Hi from ddsp" << std::endl;
 		ddspModel = new DDSPModel();
+		convolver = new Convolver();
 		for (int i = 0; i < 2 * B_SIZE; i++) 
 		{
 			freq_buffer[i] = 440.0f;
@@ -72,8 +75,11 @@ struct Ddsp : Module {
 				freq += dsp::FREQ_C4 * inputs[PITCH_INPUT].getVoltage();
 			}
 			freq_buffer[head % (2 * B_SIZE)] = clamp(freq, 0.f, args.sampleRate / 2.f);
+			float output = 0;
 
-			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
+			convolver->convolve(&out_buffer[(model_head + head) % (2 * B_SIZE)], output, args.sampleRate);
+			// outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(out_buffer[(model_head + head) % (2 * B_SIZE)], -10.0f, 10.0f));
+			outputs[OUTPUT_OUTPUT].setVoltage(rack::math::clamp(output, -10.0f, 10.0f));
 
 			if (!(head % B_SIZE))
 			{
@@ -107,6 +113,7 @@ struct Ddsp : Module {
 		{
 			ddspModel->load(at::str(modelPath));
 		}
+		convolver->loadIR();
 	}
 };
 
@@ -134,6 +141,7 @@ struct DdspWidget : ModuleWidget {
 		menu->addChild(new MenuSeparator);
 
 		menu->addChild(createMenuItem("Load Module", "", [=]() {module->openDialogAndLoadModel();}));
+		menu->addChild(createMenuItem("Load IR", "", [=]() {module->openDialogAndLoadModel();}));
 	}
 };
 
