@@ -39,3 +39,9 @@ Now that the hackathon is complete we are planning to get the module into a suit
 1. Embedding some models in to the module.
 2. Smoothing out the interpolation function 
 3. Building with static libs for MacOS, Windows and Linux for distribution to VCVRack users.
+
+## References:
+
+- [DDSP implementation in PureData](https://github.com/acids-ircam/ddsp_pytorch)
+- [Neural audio synthesis hackathon (NASH) 2021](https://signas-qmul.github.io/nash/)
+- [Differential digital signal processing](https://magenta.tensorflow.org/ddsp)
