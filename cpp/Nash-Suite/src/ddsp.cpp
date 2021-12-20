@@ -161,12 +161,12 @@ struct DdspWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.489, 10.576)), module, Ddsp::PITCH_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.706, 10.431)), module, Ddsp::LOUDNESS_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.489, 14.771)), module, Ddsp::PITCH_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.706, 14.771)), module, Ddsp::LOUDNESS_INPUT));
 
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.24, 84.13)), module, Ddsp::INTERP_MODEL_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.24, 81.591)), module, Ddsp::INTERP_MODEL_PARAM));
 
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.24, 113.581)), module, Ddsp::OUTPUT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.24, 111.043)), module, Ddsp::OUTPUT_OUTPUT));
 	}
 
 	void appendContextMenu(Menu* menu) override {
