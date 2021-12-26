@@ -53,7 +53,6 @@ target_link_libraries(plugin Rack "${TORCH_LIBRARIES}")
 message(STATUS $<TARGET_OBJECTS:plugin>)
 
 if(UNIX)
-    set(CMAKE_BUILD_RPATH "/tmp/Rack2/")
     set_target_properties(plugin PROPERTIES COMPILE_FLAGS "-fno-gnu-unique")
     set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/tmp/Rack2 -static-libstdc++ -static-libgcc")
 endif()
