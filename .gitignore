@@ -3,3 +3,4 @@ dist
 .vscode
 cmake-build
 cmake-dist
+libtorch

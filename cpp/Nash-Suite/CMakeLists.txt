@@ -14,8 +14,10 @@ project(${SLUG})
 
 message(STATUS "RACK_DIR: $ENV{RACK_DIR}/include")
 
+SET(LIBTORCH_DIR "" CACHE STRING "Path to libtorch")
 set (CMAKE_CXX_STANDARD 14)
-include(/Users/sean/git-repos/nash-workshop/vcv/nash-suite/cpp/Nash-Suite/dep/libtorch/share/cmake/Torch/TorchConfig.cmake)
+message(STATUS "LIBTORCH DIR: ${LIBTORCH_DIR}")
+include(${LIBTORCH_DIR}/share/cmake/Torch/TorchConfig.cmake)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 set(DIST_PATH "${PROJECT_SOURCE_DIR}/cmake-dist/${SLUG}")
@@ -24,9 +26,9 @@ message(STATUS "SLUG ${SLUG}")
 message(STATUS "VERSION: ${VERSION}")
 message(STATUS "OUTPUT PATH: ${DIST_PATH}")
 
-set(CMAKE_MACOSX_RPATH 1)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-list( APPEND CMAKE_INSTALL_RPATH /tmp/Rack2 )
+# set(CMAKE_MACOSX_RPATH 1)
+# set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH /tmp/Rack2 )
 
 include_directories($ENV{RACK_DIR}/dep/include)
 include_directories($ENV{RACK_DIR}/include)
@@ -50,6 +52,13 @@ target_link_libraries(plugin Rack "${TORCH_LIBRARIES}")
 
 message(STATUS $<TARGET_OBJECTS:plugin>)
 
+if(UNIX)
+    set(CMAKE_BUILD_RPATH "/tmp/Rack2/")
+    set_target_properties(plugin PROPERTIES COMPILE_FLAGS "-fno-gnu-unique")
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/tmp/Rack2 -static-libstdc++ -static-libgcc")
+endif()
+
+if (APPLE)
 add_custom_command(TARGET plugin POST_BUILD COMMAND
                         install_name_tool -change libRack.dylib /tmp/Rack2/libRack.dylib $<TARGET_FILE:plugin>
                         DEPENDS $<TARGET_FILE:plugin>
@@ -80,3 +89,41 @@ add_custom_command(TARGET plugin POST_BUILD COMMAND
 add_custom_command(TARGET plugin POST_BUILD COMMAND
                         cp ${PROJECT_SOURCE_DIR}/cmake-dist/*.vcvplugin ~/Documents/Rack2/plugins/
                     )
+endif()
+
+if(UNIX)
+add_custom_command(TARGET plugin POST_BUILD COMMAND
+                        echo "Handling post build linux"
+                    )
+
+add_custom_command(TARGET plugin POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        ${PROJECT_SOURCE_DIR}/res ${DIST_PATH}/res
+                        DEPENDS $<TARGET_FILE:plugin>    
+                    )
+add_custom_command(TARGET plugin POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        ${PROJECT_SOURCE_DIR}/res ${DIST_PATH}/res
+                        DEPENDS $<TARGET_FILE:plugin>    
+                    )
+
+add_custom_command(TARGET plugin POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy
+                        ${PROJECT_SOURCE_DIR}/plugin.json ${DIST_PATH}/plugin.json
+                        DEPENDS $<TARGET_FILE:plugin>
+                    )
+
+add_custom_command(TARGET plugin POST_BUILD COMMAND
+                    rm -f ${PROJECT_SOURCE_DIR}/cmake-dist/${SLUG}-${VERSION}-mac.vcvplugin
+                        DEPENDS $<TARGET_FILE:plugin>
+                    )
+                    
+add_custom_command(TARGET plugin POST_BUILD COMMAND
+                    cd ${PROJECT_SOURCE_DIR}/cmake-dist && tar -c ${SLUG} | zstd -19 -o ${SLUG}-${VERSION}-lin.vcvplugin
+                        DEPENDS $<TARGET_FILE:plugin>
+                    )
+
+add_custom_command(TARGET plugin POST_BUILD COMMAND
+                    cp ${PROJECT_SOURCE_DIR}/cmake-dist/*.vcvplugin ~/.Rack2/plugins/
+                    )
+endif()
