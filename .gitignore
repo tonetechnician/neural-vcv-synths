@@ -4,3 +4,4 @@ dist
 cmake-build
 cmake-dist
 libtorch
+tmp
