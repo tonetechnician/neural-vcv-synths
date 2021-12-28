@@ -10,4 +10,4 @@ cmake-init:
 	cd ./Nash-Suite/cmake-build && cmake .. -DLIBTORCH_DIR=${shell cd "./Nash-Suite/dep/libtorch"; pwd}\
 
 cmake-build:
-		cd ./Nash-Suite/cmake-build && cmake --build .
+		cd ./Nash-Suite/cmake-build && cmake --clean-first . && cmake --build .
