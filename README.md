@@ -27,7 +27,9 @@ There are two directories.
 The repo holds some sub-repos. Please clone them with:
 
 1. `git clone https://gitlab.com/tonetechnician/nash-suite.git --recurse-submodules`
-2. Ensure you have the libtorch shared libraries. If using Linux, make sure you use the cxx11 ABI compiled library and not the older ABI as the plugin will not load.
+2. Navigate to cpp and run `make init`. This should initialize your environment and download and extract libtorch into the /Nash-Suite/dep folder.
+3. Ensure you have cmake installed, then you can run `make cmake-init`
+4. Build the plugin using `make cmake-build`
 
 ## Folder structure
 
