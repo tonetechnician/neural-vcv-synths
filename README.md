@@ -27,6 +27,7 @@ There are two directories.
 The repo holds some sub-repos. Please clone them with:
 
 1. `git clone https://gitlab.com/tonetechnician/nash-suite.git --recurse-submodules`
+2. Ensure you have the libtorch shared libraries. If using Linux, make sure you use the cxx11 ABI compiled library and not the older ABI as the plugin will not load.
 
 ## Folder structure
 
