@@ -1,6 +1,5 @@
 #!/bin/bash
 init:
-	export RACK_DIR=${cd "../Rack-SDK/"; pwd}
 	./scripts/init-env.sh
 
 cmake-init:
