@@ -28,7 +28,9 @@ message(STATUS "OUTPUT PATH: ${DIST_PATH}")
 
 include_directories($ENV{RACK_DIR}/dep/include)
 include_directories($ENV{RACK_DIR}/include)
-link_directories("/tmp/Rack2")
+if(UNIX AND NOT APPLE)
+    link_directories("/tmp/Rack2")
+endif()
 link_directories($ENV{RACK_DIR})
 
 add_subdirectory(src)
@@ -49,7 +51,8 @@ target_link_libraries(plugin Rack "${TORCH_LIBRARIES}")
 
 message(STATUS $<TARGET_OBJECTS:plugin>)
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
+    link_directories("/tmp/Rack2")
     set_target_properties(plugin PROPERTIES COMPILE_FLAGS "-g -O3 -march=nehalem -fno-gnu-unique -fPIC")
     set(CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
 endif()
@@ -87,7 +90,7 @@ add_custom_command(TARGET plugin POST_BUILD COMMAND
                     )
 endif()
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
 add_custom_command(TARGET plugin POST_BUILD COMMAND
                         echo "Handling post build linux"
                     )
