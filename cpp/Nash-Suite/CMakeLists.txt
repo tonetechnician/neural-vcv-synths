@@ -28,9 +28,6 @@ message(STATUS "OUTPUT PATH: ${DIST_PATH}")
 
 include_directories($ENV{RACK_DIR}/dep/include)
 include_directories($ENV{RACK_DIR}/include)
-if(UNIX AND NOT APPLE)
-    link_directories("/tmp/Rack2")
-endif()
 link_directories($ENV{RACK_DIR})
 
 add_subdirectory(src)
