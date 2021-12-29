@@ -13,5 +13,5 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]] ; then
   echo "Set up linux"
   echo "Downloading libtorch shared librariess with cxx11 ABI"
   wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-$LIBTORCH_VER%2Bcpu.zip -P ./tmp
-  unzip ./tmp/libtorch-cxx11-abi-shared-with-deps-$LIBTORCH_VER+cpu.zip -d ./Nash-Suite/dep/libtorch
+  unzip ./tmp/libtorch-cxx11-abi-shared-with-deps-$LIBTORCH_VER+cpu.zip -d ./Nash-Suite/dep
 fi
