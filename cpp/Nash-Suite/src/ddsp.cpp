@@ -19,8 +19,8 @@ struct Ddsp : Module {
 		PARAMS_LEN
 	};
 	enum InputId {
-		PITCH_INPUT,
-		LOUDNESS_INPUT,
+		A_INPUT,
+		// LOUDNESS_INPUT,
 		INPUTS_LEN
 	};
 	enum OutputId {
@@ -37,6 +37,8 @@ struct Ddsp : Module {
 	Convolver* convolver;
 	std::thread* compute_thread = nullptr;
 	int head = 0;
+	float in_buffer[2 * B_SIZE];
+	float fft_out_buffer[2 * B_SIZE];
 	float freq_buffer[2 * B_SIZE];
 	float loudness_buffer[2 * B_SIZE];
 	float out_buffer[2 * B_SIZE];
@@ -55,12 +57,13 @@ struct Ddsp : Module {
 	int sample_counter = 0;
 
 	float currentPosition = 0.0f;
+	float loudness = 0.0f;
 
 	Ddsp() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 		configParam(INTERP_MODEL_PARAM, 0.f, 3.f, 0.f, "Interpolate Model");
-		configInput(PITCH_INPUT, "Pitch");
-		configInput(LOUDNESS_INPUT, "Loudness");
+		configInput(A_INPUT, "Input");
+		// configInput(LOUDNESS_INPUT, "Loudness");
 		configOutput(OUTPUT_OUTPUT, "Audio");
 		std::cout  << "Hi from ddsp" << std::endl;
 		ddspModel = new DDSPModel();
@@ -68,7 +71,9 @@ struct Ddsp : Module {
 		for (int i = 0; i < 2 * B_SIZE; i++) 
 		{
 			freq_buffer[i] = 0.0f;
+			fft_out_buffer[i] = 0.0f;
 			loudness_buffer[i] = 100.0f;
+			in_buffer[i] = 0.0f;
 			// test_buffer[i] = (float) (i % B_SIZE) / (B_SIZE * 2.0f) - 0.25;
 			// test_buffer[i] = (float) (i * 0.5f) / (B_SIZE * 2.0f);
 			// std::cout << "Test buffer value: " << test_buffer[i] << std::endl;
@@ -79,20 +84,32 @@ struct Ddsp : Module {
 
 		float pitch = 0;
 		float freq = 0;
-		if (inputs[PITCH_INPUT].isConnected() && ddspModel->modelIsLoaded() && convolver->isIRLoaded())
+		double loudnessFilterCoeff = (1.0 - std::exp((-1) / (0.2 * args.sampleRate)));
+
+		
+
+		if (inputs[A_INPUT].isConnected() && ddspModel->modelIsLoaded() && convolver->isIRLoaded())
 		{
 			if (!linear) {
-				pitch += inputs[PITCH_INPUT].getVoltage();
+				pitch += inputs[A_INPUT].getVoltage();
 				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
 			}
 			else {
 				freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
-				freq += dsp::FREQ_C4 * inputs[PITCH_INPUT].getVoltage();
+				freq += dsp::FREQ_C4 * inputs[A_INPUT].getVoltage();
 			}
+
+			// std::cout << std::exp(0.2 * args.sampleTime) << std::endl;
+
 			int index = (model_head + (head % B_SIZE)) % (2 * B_SIZE);
 
+			in_buffer[index] = inputs[A_INPUT].getVoltage();
+
+			// dsp::ComplexFFT::fft(in_buffer, fft_out_buffer);
+			loudness = loudness + (loudnessFilterCoeff * (rescale(inputs[A_INPUT].getVoltage(), -10.0f, 10.0f, 0.0f, 100.0f) - loudness));
+
 			freq_buffer[index] = clamp(freq, 0.f, args.sampleRate / 2.f);
-			loudness_buffer[index] = rescale(inputs[LOUDNESS_INPUT].getVoltage(), -10.0f, 10.0f, 0.0f, 100.0f);
+			loudness_buffer[index] =loudness;
 
 			float output = 0;
 			convolver->convolve(&out_buffer[index], output, args.sampleRate);
@@ -161,8 +178,8 @@ struct DdspWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.489, 14.771)), module, Ddsp::PITCH_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.706, 14.771)), module, Ddsp::LOUDNESS_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.489, 14.771)), module, Ddsp::A_INPUT));
+		// addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.706, 14.771)), module, Ddsp::LOUDNESS_INPUT));
 
 		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.24, 81.591)), module, Ddsp::INTERP_MODEL_PARAM));
 
@@ -174,7 +191,7 @@ struct DdspWidget : ModuleWidget {
 		assert(module);
 
 		menu->addChild(new MenuSeparator);
-		menu->addChild(createMenuItem("Load Module", "", [=]() {module->openDialogAndLoadModel();}));
+		menu->addChild(createMenuItem("Load Model", "", [=]() {module->openDialogAndLoadModel();}));
 	}
 };
 
